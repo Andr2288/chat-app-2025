@@ -105,14 +105,30 @@ const updateProfile = async (req, res) => {
       return res.status(400).json({ message: "ProfilePic is required" });
     }
 
-    const uploadResponse = await cloudinary.uploader.upload(profilePic);
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { profilePic: uploadResponse.secure_url },
-      { new: true }
-    );
+    console.log("Cloudinary config:", {
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY ? "Present" : "Missing",
+      api_secret: process.env.CLOUDINARY_API_SECRET ? "Present" : "Missing",
+    });
 
-    return res.status(200).json(updatedUser);
+    try {
+      const uploadResponse = await cloudinary.uploader.upload(profilePic);
+      console.log("Upload successful:", uploadResponse.secure_url);
+
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { profilePic: uploadResponse.secure_url },
+        { new: true }
+      );
+
+      return res.status(200).json(updatedUser);
+    } catch (cloudinaryError) {
+      console.log("Cloudinary upload error:", cloudinaryError);
+      return res.status(400).json({
+        message: "Failed to upload image to Cloudinary",
+        error: cloudinaryError.message,
+      });
+    }
   } catch (error) {
     console.log("Error in update controller", error.message);
 
